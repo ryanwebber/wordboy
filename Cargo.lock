@@ -5,3 +5,12 @@ version = 3
 [[package]]
 name = "ab_os"
 version = "0.1.0"
+dependencies = [
+ "voladdress",
+]
+
+[[package]]
+name = "voladdress"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75f4a9a7c7e717541992e2405d44d12fb019db4117ec9fcca84b784060b27084"

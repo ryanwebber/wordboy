@@ -6,6 +6,7 @@ build-std = ["core"]
 
 [target.thumbv4t-none-eabi]
 rustflags = [
-  "-Clinker=arm-none-eabi-ld",
-  "-Clink-arg=-Tlinker/boot.ld",
+    "-Ztrap-unreachable=no",
+    "-Clinker=arm-none-eabi-ld",
+    "-Clink-arg=-Tlinker/boot.ld",
 ]
