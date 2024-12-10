@@ -13,7 +13,6 @@ fn main() {
     };
 
     let tilewise_width = image.size().width / TILE_SIZE;
-    let tilewise_height = image.size().height / TILE_SIZE;
 
     /*
         These are 4bpp pixels, where each bit corresponds to an index in the palette. The
@@ -48,16 +47,6 @@ fn main() {
         buffer[buffer_index as usize] = color;
     }
 
-    // Let's look at the buffer
-    // println!("Uncompacted Buffer:");
-    // for i in buffer.chunks_exact(8) {
-    //     for j in i {
-    //         print!("{}", j);
-    //     }
-
-    //     println!();
-    // }
-
     /*
         Now that we have tiles stored contiguously in memory, we need to compact them
         into 32-bit words, where each word contains 8 pixels (4bpp). The GBA is little-endian,
@@ -75,13 +64,6 @@ fn main() {
         acc.push(word);
         acc
     });
-
-    // Let's look at the buffer again
-    // println!("Compacted Buffer:");
-    // for i in buffer.iter() {
-    //     // Print this 32-bit word as an 8-digit hex number
-    //     println!("{:08x}", i);
-    // }
 
     // Now, let's write the buffer to a file in OUT_DIR so we can import it in our binary
     let out_dir = std::env::var("OUT_DIR").unwrap();
