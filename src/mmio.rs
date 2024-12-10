@@ -27,5 +27,5 @@ pub const OBJ_ATTRS_1: VolSeries<ObjAttr1, Safe, Safe, 128, 64> =
 pub const OBJ_ATTRS_2: VolSeries<ObjAttr2, Safe, Safe, 128, 64> =
     unsafe { VolSeries::new(0x0700_0000 + 4) };
 
-pub const OBJ_ATTRS: VolSeries<ObjAttr, Safe, Safe, 128, 64> =
+pub const OBJ_ATTRS: VolSeries<ObjAttr, Safe, Safe, 128, 8> =
     unsafe { VolSeries::new(0x0700_0000) };
