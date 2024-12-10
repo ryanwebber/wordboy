@@ -3,20 +3,10 @@
 
 use ab_os::{
     mmio::{BACKDROP, DISPCNT, KEYINPUT, OBJ_ATTRS, OBJ_PALETTE, OBJ_TILE4},
-    video::{Color, DisplayControl, ObjAttr, ObjAttr0, ObjAttr1, ObjAttr2, Tile4, TileSize},
+    video::{Color, DisplayControl, ObjAttr, Tile4, TileSize},
 };
 
-const TILES: &'static [u8] = include_bytes!(env!("TILES_BIN"));
-
-fn tile(index: usize) -> Tile4 {
-    let start = index * 32;
-    let end = start + 8;
-    let data = &TILES[start..end];
-
-    // Cast slice to a u32 array
-    let data = unsafe { core::mem::transmute::<&[u8], &[u32]>(data) };
-    data.try_into().unwrap_or_else(|_| [1; 8])
-}
+mod spritesheet;
 
 #[no_mangle]
 pub extern "C" fn main() -> ! {
@@ -28,10 +18,10 @@ pub extern "C" fn main() -> ! {
     OBJ_PALETTE.index(4).write(Color::BLUE);
 
     {
-        OBJ_TILE4.index(1).write(tile(0));
-        OBJ_TILE4.index(2).write(tile(1));
-        OBJ_TILE4.index(3).write(tile(2));
-        OBJ_TILE4.index(4).write(tile(3));
+        let tiles = spritesheet::tile_16x16(22);
+        for (i, tile) in tiles.iter().enumerate() {
+            OBJ_TILE4.index(i + 1).write(*tile);
+        }
 
         let obj = ObjAttr::new()
             .size(TileSize::SIZE_16X16)
@@ -51,18 +41,12 @@ pub extern "C" fn main() -> ! {
 
         let obj = ObjAttr::new()
             .size(TileSize::SIZE_16X16)
-            .tile(2)
+            .tile(5)
             .palette(0)
             .x(15)
             .y(58);
 
-        // OBJ_ATTRS.index(1).write(obj);
-
-        OBJ_ATTRS.index(1).write(ObjAttr(
-            ObjAttr0(0),       // square shape
-            ObjAttr1(1 << 14), // size 1
-            ObjAttr2(5),       // base tile 1
-        ));
+        OBJ_ATTRS.index(1).write(obj);
     }
 
     DISPCNT.write(DisplayControl::ENABLE_OBJ | DisplayControl::LINEAR_OBJ_TILE_DATA);
