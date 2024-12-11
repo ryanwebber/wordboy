@@ -5,17 +5,11 @@ use ab_os::{
     mmio::{BACKDROP, DISPCNT, KEYINPUT, OBJ_ATTRS, OBJ_PALETTE, OBJ_TILE4},
     video::{Color, DisplayControl, ObjAttr, Tile4, TileSize},
 };
+use utils::WordBuffer;
 
-fn draw_tile(offset: usize, index: u16, palette: u16, x: i16, y: i16) {
-    let obj = ObjAttr::new()
-        .size(TileSize::SIZE_16X16)
-        .tile(index * 4 + 1)
-        .palette(palette)
-        .x(x)
-        .y(y);
-
-    OBJ_ATTRS.index(offset).write(obj);
-}
+mod dictionary;
+mod game;
+mod utils;
 
 #[no_mangle]
 pub extern "C" fn main() -> ! {
@@ -23,42 +17,8 @@ pub extern "C" fn main() -> ! {
     initialize_palette();
     intiialize_sprites();
 
-    const SCREEN_WIDTH: i16 = 240;
-    const SCREEN_HEIGHT: i16 = 160;
-    const TILE_PADDING: i16 = 4;
-    const TILE_COL_COUNT: i16 = 5;
-    const TILE_ROW_COUNT: i16 = 6;
-    const TILE_WIDTH: i16 = 16;
-    const ROW_WIDTH: i16 = (TILE_COL_COUNT * TILE_WIDTH) + (TILE_PADDING * TILE_COL_COUNT - 1);
-    const ROW_OFFSET: i16 = (SCREEN_WIDTH - ROW_WIDTH) / 2;
-
-    let mut o = 0;
-    // Draw 5-tiles across, 6-tiles down
-    for i in 0..TILE_ROW_COUNT {
-        for j in 0..TILE_COL_COUNT {
-            draw_tile(
-                o,
-                o as u16,
-                3,
-                ROW_OFFSET + (j as i16) * (TILE_WIDTH + TILE_PADDING),
-                TILE_PADDING * 2 + (i as i16) * (TILE_WIDTH + TILE_PADDING),
-            );
-
-            o += 1;
-        }
-    }
-
-    for i in 0..TILE_COL_COUNT {
-        draw_tile(
-            o,
-            27,
-            3,
-            ROW_OFFSET + (i as i16) * (TILE_WIDTH + TILE_PADDING),
-            SCREEN_HEIGHT - TILE_WIDTH - TILE_PADDING * 2,
-        );
-
-        o += 1;
-    }
+    let state = game::State::new(WordBuffer::from_str("HELLO"));
+    state.render();
 
     loop {
         let k = KEYINPUT.read();
@@ -92,6 +52,12 @@ fn initialize_palette() {
     OBJ_PALETTE.index(16 * 3 + 2).write(Color::rgb(13, 15, 15));
     OBJ_PALETTE.index(16 * 3 + 3).write(Color::rgb(6, 6, 6));
     OBJ_PALETTE.index(16 * 3 + 4).write(Color::rgb(8, 10, 10));
+
+    // Palette Bank 4 : Black letters
+    OBJ_PALETTE.index(16 * 4 + 1).write(Color::WHITE);
+    OBJ_PALETTE.index(16 * 4 + 2).write(Color::BLACK);
+    OBJ_PALETTE.index(16 * 4 + 3).write(Color::rgb(6, 6, 6));
+    OBJ_PALETTE.index(16 * 4 + 4).write(Color::rgb(18, 18, 18));
 }
 
 fn intiialize_sprites() {
