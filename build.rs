@@ -67,7 +67,7 @@ fn main() {
 
     // Now, let's write the buffer to a file in OUT_DIR so we can import it in our binary
     let out_dir = std::env::var("OUT_DIR").unwrap();
-    let path = std::path::Path::new(&out_dir).join("tiles.bin");
+    let path = std::path::Path::new(&out_dir).join("sprites.bin");
 
     // Transmute the buffer to a byte slice so we can write it to a file, we've already
     // accounded for the endianness when compacting the buffer
@@ -79,9 +79,9 @@ fn main() {
         )
     };
 
-    std::fs::write(&path, buffer).expect("Failed to write tiles.bin");
+    std::fs::write(&path, buffer).expect("Failed to write sprites.bin");
 
     // Write this path to an environment variable so we can access it in our binary
     println!("cargo:rerun-if-changed=src/img/spritesheet.bmp");
-    println!("cargo:rustc-env=TILES_BIN={}", path.display());
+    println!("cargo:rustc-env=SPRITES_BIN={}", path.display());
 }
