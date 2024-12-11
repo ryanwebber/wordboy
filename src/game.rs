@@ -1,5 +1,3 @@
-use core::marker::PhantomData;
-
 use wordboy::{
     input::KeyInput,
     mmio::OBJ_ATTRS,
@@ -54,7 +52,7 @@ impl SplashScreen {
 
                 let obj = ObjAttr::new()
                     .size(TileSize::SIZE_16X16)
-                    .tile(AsciiChar::from_u8(letter as u8).unwrap().tile_index())
+                    .tile(AsciiChar::from_u8(letter as u8).tile_index())
                     .palette((palette_offset + i as u16) % 3 + 1)
                     .x(x)
                     .y(y);
@@ -67,12 +65,26 @@ impl SplashScreen {
         let mut attr_allocator = ObjAttrAllocator::new();
 
         draw_text("WORD", 40, tick, &mut attr_allocator);
+
         draw_text(
             "BOY",
             40 + TILE_WIDTH + TILE_PADDING,
             tick + 4,
             &mut attr_allocator,
         );
+
+        let start_off_x = SCREEN_WIDTH / 2 - TILE_WIDTH;
+        let start_off_y = SCREEN_HEIGHT - TILE_WIDTH - 24;
+        for i in 0..2 {
+            let obj = ObjAttr::new()
+                .size(TileSize::SIZE_16X16)
+                .tile((30 + i) * 4 + 1)
+                .palette(GREY_PALETTE)
+                .x(start_off_x + (i as i16) * TILE_WIDTH)
+                .y(start_off_y);
+
+            attr_allocator.allocate_and_write(obj);
+        }
     }
 }
 
@@ -84,8 +96,9 @@ pub struct Game {
 
 impl Game {
     pub fn new(seed: u16) -> Self {
+        let word = dictionary::random_word(seed as usize);
         Self {
-            instance: Instance::new(WordBuffer::from_str("HELLO")),
+            instance: Instance::new(word),
             prev_input: KeyInput(0),
             tick: 0,
         }
@@ -183,10 +196,6 @@ impl Instance {
         }
     }
 
-    fn current_guess(&self) -> &WordBuffer {
-        self.guesses.last().unwrap()
-    }
-
     fn input(&mut self, input: Input) {
         match input {
             Input::Char => {
@@ -229,7 +238,7 @@ impl Instance {
                 }
 
                 // Check if the guess is valid or not
-                if !dictionary::valid_guess(&current_guess) {
+                if !dictionary::is_valid_guess(&current_guess) {
                     current_guess.clear();
                     return;
                 }

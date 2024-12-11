@@ -5,6 +5,7 @@ use game::{Game, SplashScreen};
 use wordboy::{
     input::KeyInput,
     mmio::{DISPCNT, KEYINPUT, OBJ_ATTRS, OBJ_PALETTE, OBJ_TILE4},
+    rand::PRNG,
     video::{wait_vblank, Color, DisplayControl, ObjAttr, Tile4},
 };
 
@@ -18,7 +19,11 @@ pub extern "C" fn main() -> ! {
     initialize_palette();
     intiialize_sprites();
 
+    let mut rng = PRNG::seeded();
+
     'restart: loop {
+        wait_vblank();
+
         // Nuke the display
         for attr in OBJ_ATTRS.iter() {
             attr.write(ObjAttr::new());
@@ -26,25 +31,36 @@ pub extern "C" fn main() -> ! {
 
         // Start screen
         {
+            let mut prev_input = KeyInput(0);
             let mut splash_screen = SplashScreen::new();
             loop {
+                // Poke the RNG to increase our amount of perceived randomness
+                _ = rng.next();
+
                 wait_vblank();
                 splash_screen.update();
                 splash_screen.render();
 
-                if KEYINPUT.read().a() {
+                let input = KEYINPUT.read();
+                if input.start_once(prev_input) {
                     break;
                 }
+
+                prev_input = input;
             }
         }
 
         // Main game loop
         'new_game: loop {
-            let mut game = Game::new(0);
+            let mut game = Game::new(rng.next());
             let mut prev_input = KeyInput(0);
 
             'game_tick: loop {
                 wait_vblank();
+
+                // Poke the RNG to increase our amount of perceived randomness
+                _ = rng.next();
+
                 let current_input = KEYINPUT.read();
                 if current_input.start_once(prev_input) {
                     continue 'restart;

@@ -120,17 +120,20 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AsciiChar(pub u8);
 
 impl AsciiChar {
     pub const NULL: Self = Self(0x00);
 
-    pub fn from_u8(byte: u8) -> Option<Self> {
-        if byte >= 0x20 && byte <= 0x7E {
-            Some(Self(byte))
+    pub const fn from_u8(byte: u8) -> Self {
+        if byte >= b'A' && byte <= b'Z' {
+            Self(byte)
+        } else if byte >= b'a' && byte <= b'z' {
+            Self(b'A' + (byte - b'a'))
         } else {
-            None
+            Self::NULL
         }
     }
 
@@ -139,11 +142,11 @@ impl AsciiChar {
     }
 
     pub fn letter_index(self) -> u16 {
-        if self == AsciiChar::NULL {
-            return 26;
+        if self.0 >= b'A' && self.0 <= b'Z' {
+            return (self.0 - b'A') as u16;
+        } else {
+            26
         }
-
-        (self.0 - b'A') as u16
     }
 
     pub fn tile_index(self) -> u16 {
@@ -151,14 +154,24 @@ impl AsciiChar {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct WordBuffer([AsciiChar; 5]);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct WordBuffer(pub [AsciiChar; 5]);
 
 impl WordBuffer {
     pub const EMPTY: Self = Self([AsciiChar::NULL; 5]);
 
     pub fn new(value: [AsciiChar; 5]) -> Self {
         Self(value)
+    }
+
+    pub const fn from_u8s(value: [u8; 5]) -> Self {
+        let mut buffer = [AsciiChar::NULL; 5];
+        buffer[0] = AsciiChar::from_u8(value[0]);
+        buffer[1] = AsciiChar::from_u8(value[1]);
+        buffer[2] = AsciiChar::from_u8(value[2]);
+        buffer[3] = AsciiChar::from_u8(value[3]);
+        buffer[4] = AsciiChar::from_u8(value[4]);
+        Self(buffer)
     }
 
     pub fn from_str(value: &str) -> Self {
@@ -169,7 +182,7 @@ impl WordBuffer {
                 break;
             }
 
-            buffer[i] = AsciiChar::from_u8(c as u8).unwrap_or(AsciiChar::NULL);
+            buffer[i] = AsciiChar::from_u8(c as u8);
         }
 
         Self(buffer)

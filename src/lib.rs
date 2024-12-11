@@ -3,6 +3,7 @@
 
 pub mod input;
 pub mod mmio;
+pub mod rand;
 pub mod video;
 
 #[naked]
