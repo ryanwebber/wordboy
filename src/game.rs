@@ -1,4 +1,4 @@
-use ab_os::{
+use wordboy::{
     input::KeyInput,
     mmio::OBJ_ATTRS,
     video::{ObjAttr, TileSize},

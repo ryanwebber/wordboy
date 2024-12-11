@@ -1,12 +1,12 @@
 #![no_std]
 #![no_main]
 
-use ab_os::{
+use game::Game;
+use wordboy::{
     input::KeyInput,
     mmio::{DISPCNT, KEYINPUT, OBJ_ATTRS, OBJ_PALETTE, OBJ_TILE4},
     video::{wait_vblank, Color, DisplayControl, ObjAttr, Tile4},
 };
-use game::Game;
 
 mod dictionary;
 mod game;

@@ -1,12 +1,12 @@
-# abOS
+# WordBoy
 
-A pointless operating system for the Game Boy Advance.
+A Wordle clone for the GameBoy Advance.
 
 ## Building
 
-In addition to rust, you'll need the `arm-none-eabi` toolchain to build abOS, which can be found
+To build a ROM, you'll need the `arm-none-eabi` rust toolchain, which can be found
 [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads). With the toolchain installed
-and in your `PATH`, you can build abOS by simply running:
+and in your `PATH`, you can build the project by simply running:
 
 ```sh
 cargo build
