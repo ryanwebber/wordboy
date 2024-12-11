@@ -1,4 +1,5 @@
 use ab_os::{
+    input::KeyInput,
     mmio::OBJ_ATTRS,
     video::{ObjAttr, TileSize},
 };
@@ -24,84 +25,113 @@ const BLACK_PALETTE: u16 = 4;
 
 const NULL_TILE: u16 = 47;
 
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum GuessState {
-    Grey = 0,
-    Yellow = 1,
-    Green = 2,
-    Black = 3,
+pub struct Game {
+    instance: Instance,
+    prev_input: KeyInput,
 }
 
-impl GuessState {
-    fn maybe_upgrade(&mut self, new_state: Self) {
-        if (*self as u8) < (new_state as u8) {
-            *self = new_state;
+impl Game {
+    pub fn new(seed: u16) -> Self {
+        Self {
+            instance: Instance::new(WordBuffer::from_str("HELLO")),
+            prev_input: KeyInput(0),
         }
     }
 
-    fn palette_index(&self) -> u16 {
-        match self {
-            Self::Grey => GREY_PALETTE,
-            Self::Yellow => YELLOW_PALETTE,
-            Self::Green => GREEN_PALETTE,
-            Self::Black => BLACK_PALETTE,
+    pub fn state(&self) -> State {
+        let word_guessed = self.instance.last_submitted_guess().map_or(false, |guess| {
+            guess.as_slice() == self.instance.word.as_slice()
+        });
+
+        if word_guessed {
+            State::Completed
+        } else if self.instance.finished_guessing {
+            State::Failed
+        } else {
+            State::InProgress
         }
+    }
+
+    pub fn update(&mut self, input: KeyInput) {
+        if input.a_once(self.prev_input) {
+            self.instance.input(Input::Char);
+        }
+
+        if input.b_once(self.prev_input) {
+            self.instance.input(Input::Delete);
+        }
+
+        if input.left_once(self.prev_input) {
+            self.instance.input(Input::CursorLeft);
+        }
+
+        if input.right_once(self.prev_input) {
+            self.instance.input(Input::CursorRight);
+        }
+
+        if input.up_once(self.prev_input) {
+            self.instance.input(Input::Submit);
+        }
+
+        self.prev_input = input;
+    }
+
+    pub fn render(&self) {
+        self.instance.render();
     }
 }
 
-enum Input {
-    Char,
-    CursorLeft,
-    CursorRight,
-    Key(AsciiChar),
-    Delete,
-    Submit,
+pub enum State {
+    Completed,
+    Failed,
+    InProgress,
 }
 
-pub struct State {
+struct Instance {
     word: WordBuffer,
     guesses: ArrayVec<WordBuffer, TILE_ROW_COUNT>,
-    letter_states: [GuessState; 27],
+    letter_states: [GuessInstance; 27],
+    finished_guessing: bool,
     cursor: u8,
 }
 
-impl State {
-    pub fn new(word: WordBuffer) -> Self {
-        let mut this = Self {
+impl Instance {
+    fn new(word: WordBuffer) -> Self {
+        Self {
             word,
             guesses: {
                 let mut guesses = ArrayVec::new();
                 guesses.push(WordBuffer::EMPTY);
                 guesses
             },
-            letter_states: [GuessState::Grey; 27],
+            letter_states: [GuessInstance::Grey; 27],
+            finished_guessing: false,
             cursor: 0,
-        };
+        }
+    }
 
-        this.input(Input::Key(AsciiChar(b'H')));
-        this.input(Input::Key(AsciiChar(b'G')));
-        this.input(Input::Key(AsciiChar(b'A')));
-        this.input(Input::Delete);
-        this.input(Input::Key(AsciiChar(b'B')));
-        this.input(Input::Key(AsciiChar(b'V')));
-        this.input(Input::Key(AsciiChar(b'E')));
-        this.input(Input::Submit);
-        this.input(Input::Key(AsciiChar(b'Y')));
-        this.input(Input::Key(AsciiChar(b'Q')));
-        this.input(Input::CursorRight);
-        this.input(Input::CursorRight);
-        this.input(Input::CursorLeft);
-        this.input(Input::Char);
+    fn last_submitted_guess(&self) -> Option<&WordBuffer> {
+        if self.guesses.len() > 1 {
+            self.guesses.nth(self.guesses.len() - 2)
+        } else {
+            None
+        }
+    }
 
-        this
+    fn current_guess(&self) -> &WordBuffer {
+        self.guesses.last().unwrap()
     }
 
     fn input(&mut self, input: Input) {
         match input {
             Input::Char => {
-                let char = AsciiChar(b'A' + self.cursor);
-                self.input(Input::Key(char));
+                let current_guess = self.guesses.last_mut().unwrap();
+                if current_guess.is_full() {
+                    return;
+                }
+
+                let letter = AsciiChar(b'A' + self.cursor);
+                current_guess.push(letter);
             }
             Input::CursorLeft => {
                 if self.cursor > 0 {
@@ -141,23 +171,29 @@ impl State {
                 for (i, c) in current_guess.as_slice().iter().enumerate() {
                     if self.word.as_slice()[i] == *c {
                         self.letter_states[c.letter_index() as usize]
-                            .maybe_upgrade(GuessState::Green);
+                            .maybe_upgrade(GuessInstance::Green);
                     } else if self.word.as_slice().contains(c) {
                         self.letter_states[c.letter_index() as usize]
-                            .maybe_upgrade(GuessState::Yellow);
+                            .maybe_upgrade(GuessInstance::Yellow);
                     } else {
-                        self.letter_states[c.letter_index() as usize] = GuessState::Black;
+                        self.letter_states[c.letter_index() as usize] = GuessInstance::Black;
                     }
                 }
 
                 // Add a new guess if the current one is full
-                self.guesses.push(WordBuffer::EMPTY);
+                self.finished_guessing = self.guesses.try_push(WordBuffer::EMPTY).is_err();
             }
         }
     }
 
-    pub fn render(&self) {
-        fn draw_guessed_tile(char: AsciiChar, row: usize, col: usize, palette: u16) {
+    fn render(&self) {
+        fn draw_guessed_tile(
+            char: AsciiChar,
+            row: usize,
+            col: usize,
+            palette: u16,
+            allocator: &mut ObjAttrAllocator,
+        ) {
             let x = ROW_OFFSET + (col as i16) * (TILE_WIDTH + TILE_PADDING);
             let y = TILE_PADDING + (row as i16) * (TILE_WIDTH + TILE_PADDING);
 
@@ -168,11 +204,10 @@ impl State {
                 .x(x)
                 .y(y);
 
-            // This can't be overlapped!
-            let offset = row * 5 + col;
-
-            OBJ_ATTRS.index(offset).write(obj);
+            allocator.allocate_and_write(obj);
         }
+
+        let mut attr_allocator = ObjAttrAllocator::new();
 
         for (row, word) in self.guesses.iter().enumerate() {
             for (col, char) in word.as_slice().iter().enumerate() {
@@ -186,14 +221,20 @@ impl State {
                     GREY_PALETTE
                 };
 
-                draw_guessed_tile(*char, row, col, palette_index);
+                draw_guessed_tile(*char, row, col, palette_index, &mut attr_allocator);
             }
         }
 
         let unused_guess_count = self.guesses.capacity() - self.guesses.len();
         for i in 0..unused_guess_count {
             for j in 0..5 {
-                draw_guessed_tile(AsciiChar::NULL, i + self.guesses.len(), j, BLACK_PALETTE);
+                draw_guessed_tile(
+                    AsciiChar::NULL,
+                    i + self.guesses.len(),
+                    j,
+                    BLACK_PALETTE,
+                    &mut attr_allocator,
+                );
             }
         }
 
@@ -204,7 +245,7 @@ impl State {
         for i in 0..26 {
             let char = AsciiChar(b'A' + i as u8);
             let x = base_x_offset + (i as i16 - self.cursor as i16) * (TILE_WIDTH + TILE_PADDING);
-            let y = SCREEN_HEIGHT - TILE_PADDING - TILE_WIDTH;
+            let y = SCREEN_HEIGHT - TILE_WIDTH - 12;
             let palette_index = self.letter_states[i].palette_index();
             let tile_index = if x < -TILE_WIDTH || x >= SCREEN_WIDTH {
                 NULL_TILE * 4 + 1
@@ -219,13 +260,12 @@ impl State {
                 .x(x)
                 .y(y);
 
-            let offset = 30 + i;
-            OBJ_ATTRS.index(offset).write(obj);
+            attr_allocator.allocate_and_write(obj);
         }
 
         // Draw the cursor
         let cursor_x = base_x_offset;
-        let cursor_y = SCREEN_HEIGHT - TILE_PADDING - TILE_WIDTH * 2 - 2;
+        let cursor_y = SCREEN_HEIGHT - TILE_PADDING - 6;
         let obj = ObjAttr::new()
             .size(TileSize::SIZE_16X16)
             .tile(27 * 4 + 1)
@@ -233,6 +273,60 @@ impl State {
             .x(cursor_x)
             .y(cursor_y);
 
-        OBJ_ATTRS.index(64).write(obj);
+        attr_allocator.allocate_and_write(obj);
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum GuessInstance {
+    Grey = 0,
+    Yellow = 1,
+    Green = 2,
+    Black = 3,
+}
+
+impl GuessInstance {
+    fn maybe_upgrade(&mut self, new_state: Self) {
+        if (*self as u8) < (new_state as u8) {
+            *self = new_state;
+        }
+    }
+
+    fn palette_index(&self) -> u16 {
+        match self {
+            Self::Grey => GREY_PALETTE,
+            Self::Yellow => YELLOW_PALETTE,
+            Self::Green => GREEN_PALETTE,
+            Self::Black => BLACK_PALETTE,
+        }
+    }
+}
+
+enum Input {
+    Char,
+    CursorLeft,
+    CursorRight,
+    Key(AsciiChar),
+    Delete,
+    Submit,
+}
+
+struct ObjAttrAllocator(u16);
+
+impl ObjAttrAllocator {
+    fn new() -> Self {
+        Self(0)
+    }
+
+    fn allocate(&mut self) -> usize {
+        let index = self.0;
+        self.0 += 1;
+        index as usize
+    }
+
+    fn allocate_and_write(&mut self, attr: ObjAttr) {
+        let index = self.allocate();
+        OBJ_ATTRS.index(index).write(attr);
     }
 }

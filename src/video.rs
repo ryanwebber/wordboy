@@ -1,5 +1,7 @@
 use bitfrob::u16_with_value;
 
+use crate::mmio::REG_VCOUNT;
+
 pub const BITS_PER_BYTE: usize = 8;
 pub const PIXELS_PER_TILE: usize = 8 * 8;
 pub const SIZE_OF_TILE4: usize = (PIXELS_PER_TILE * 4) / BITS_PER_BYTE;
@@ -165,4 +167,12 @@ impl TileSize {
     pub const SIZE_8X32: Self = Self(0b10, 0b01);
     pub const SIZE_16X32: Self = Self(0b10, 0b10);
     pub const SIZE_32X64: Self = Self(0b10, 0b11);
+}
+
+pub fn wait_vblank() {
+    // Poor mans vsync. What should actually be done is
+    // enable the VBlank interrupt, put the CPU to sleep,
+    // and wake up when the interrupt is triggered.
+    while REG_VCOUNT.read() >= 160 {}
+    while REG_VCOUNT.read() < 160 {}
 }

@@ -2,10 +2,11 @@
 #![no_main]
 
 use ab_os::{
-    mmio::{BACKDROP, DISPCNT, KEYINPUT, OBJ_ATTRS, OBJ_PALETTE, OBJ_TILE4},
-    video::{Color, DisplayControl, ObjAttr, Tile4, TileSize},
+    input::KeyInput,
+    mmio::{DISPCNT, KEYINPUT, OBJ_ATTRS, OBJ_PALETTE, OBJ_TILE4},
+    video::{wait_vblank, Color, DisplayControl, ObjAttr, Tile4},
 };
-use utils::WordBuffer;
+use game::Game;
 
 mod dictionary;
 mod game;
@@ -17,12 +18,62 @@ pub extern "C" fn main() -> ! {
     initialize_palette();
     intiialize_sprites();
 
-    let state = game::State::new(WordBuffer::from_str("HELLO"));
-    state.render();
+    'restart: loop {
+        // Nuke the display
+        for attr in OBJ_ATTRS.iter() {
+            attr.write(ObjAttr::new());
+        }
 
-    loop {
-        let k = KEYINPUT.read();
-        BACKDROP.write(if k.a() { Color::WHITE } else { Color::BLACK })
+        // Start screen
+        loop {
+            wait_vblank();
+            if KEYINPUT.read().a() {
+                break;
+            }
+        }
+
+        // Main game loop
+        'new_game: loop {
+            let mut game = Game::new(0);
+            let mut prev_input = KeyInput(0);
+
+            'game_tick: loop {
+                wait_vblank();
+                let current_input = KEYINPUT.read();
+                if current_input.start_once(prev_input) {
+                    continue 'restart;
+                }
+
+                game.update(current_input);
+                game.render();
+
+                prev_input = current_input;
+
+                match game.state() {
+                    game::State::InProgress => {
+                        continue 'game_tick;
+                    }
+                    game::State::Completed => {
+                        // Noop, just let the user see that they've won
+                    }
+                    game::State::Failed => {
+                        // TODO: Draw the word for feedback to the user
+                    }
+                }
+
+                // Wait for the user to restart the game or head back to the start screen
+                loop {
+                    wait_vblank();
+                    if KEYINPUT.read().a() {
+                        continue 'new_game;
+                    }
+
+                    if KEYINPUT.read().start() || KEYINPUT.read().select() || KEYINPUT.read().b() {
+                        continue 'restart;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -58,6 +109,7 @@ fn initialize_palette() {
     OBJ_PALETTE.index(16 * 4 + 2).write(Color::BLACK);
     OBJ_PALETTE.index(16 * 4 + 3).write(Color::rgb(6, 6, 6));
     OBJ_PALETTE.index(16 * 4 + 4).write(Color::rgb(18, 18, 18));
+    OBJ_PALETTE.index(16 * 4 + 5).write(Color::rgb(20, 6, 6));
 }
 
 fn intiialize_sprites() {

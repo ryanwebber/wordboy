@@ -29,3 +29,5 @@ pub const OBJ_ATTRS_2: VolSeries<ObjAttr2, Safe, Safe, 128, 64> =
 
 pub const OBJ_ATTRS: VolSeries<ObjAttr, Safe, Safe, 128, 8> =
     unsafe { VolSeries::new(0x0700_0000) };
+
+pub const REG_VCOUNT: VolAddress<u16, Safe, ()> = unsafe { VolAddress::new(0x0400_0006) };
