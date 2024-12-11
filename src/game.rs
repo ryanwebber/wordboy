@@ -19,6 +19,7 @@ const TILE_ROW_COUNT: usize = 6;
 const TILE_WIDTH: i16 = 16;
 const ROW_WIDTH: i16 = (TILE_COL_COUNT * TILE_WIDTH) + (TILE_PADDING * (TILE_COL_COUNT - 1));
 const ROW_OFFSET: i16 = (SCREEN_WIDTH - ROW_WIDTH) / 2;
+const KBD_ANIMATION_SPEED: u16 = 4;
 
 const GREEN_PALETTE: u16 = 1;
 const YELLOW_PALETTE: u16 = 2;
@@ -78,6 +79,7 @@ impl SplashScreen {
 pub struct Game {
     instance: Instance,
     prev_input: KeyInput,
+    tick: u16,
 }
 
 impl Game {
@@ -85,6 +87,7 @@ impl Game {
         Self {
             instance: Instance::new(WordBuffer::from_str("HELLO")),
             prev_input: KeyInput(0),
+            tick: 0,
         }
     }
 
@@ -103,6 +106,16 @@ impl Game {
     }
 
     pub fn update(&mut self, input: KeyInput) {
+        self.tick += 1;
+
+        if self.instance.keyboard_anim_offset != 0 {
+            // Diminish the keyboard animation offset towards zero
+            let sign = self.instance.keyboard_anim_offset.signum();
+            let abs_offset = self.instance.keyboard_anim_offset.abs();
+            let max_diminish = abs_offset.min(KBD_ANIMATION_SPEED as i16);
+            self.instance.keyboard_anim_offset -= sign * max_diminish;
+        }
+
         if input.a_once(self.prev_input) {
             self.instance.input(Input::Char);
         }
@@ -142,6 +155,7 @@ struct Instance {
     guesses: ArrayVec<WordBuffer, TILE_ROW_COUNT>,
     letter_states: [GuessInstance; 27],
     finished_guessing: bool,
+    keyboard_anim_offset: i16,
     cursor: u8,
 }
 
@@ -155,6 +169,7 @@ impl Instance {
                 guesses
             },
             letter_states: [GuessInstance::Grey; 27],
+            keyboard_anim_offset: 0,
             finished_guessing: false,
             cursor: 0,
         }
@@ -186,11 +201,13 @@ impl Instance {
             Input::CursorLeft => {
                 if self.cursor > 0 {
                     self.cursor -= 1;
+                    self.keyboard_anim_offset = -(TILE_WIDTH + TILE_PADDING);
                 }
             }
             Input::CursorRight => {
                 if self.cursor < 25 {
                     self.cursor += 1;
+                    self.keyboard_anim_offset = TILE_WIDTH + TILE_PADDING;
                 }
             }
             Input::Delete => {
@@ -291,7 +308,7 @@ impl Instance {
         // Render the keyboard. The cursor is always in the middle,
         // so we need to adjust the position of the tiles so whatever
         // index the cursor is at is always in the middle.
-        let base_x_offset = SCREEN_WIDTH / 2 - TILE_WIDTH / 2;
+        let base_x_offset = SCREEN_WIDTH / 2 - TILE_WIDTH / 2 + self.keyboard_anim_offset;
         for i in 0..26 {
             let char = AsciiChar(b'A' + i as u8);
             let x = base_x_offset + (i as i16 - self.cursor as i16) * (TILE_WIDTH + TILE_PADDING);
