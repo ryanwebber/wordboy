@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 use wordboy::{
     input::KeyInput,
     mmio::OBJ_ATTRS,
@@ -24,6 +26,54 @@ const GREY_PALETTE: u16 = 3;
 const BLACK_PALETTE: u16 = 4;
 
 const NULL_TILE: u16 = 47;
+
+pub struct SplashScreen(u16);
+
+impl SplashScreen {
+    pub fn new() -> Self {
+        Self(0)
+    }
+
+    pub fn update(&mut self) {
+        self.0 += 1;
+    }
+
+    pub fn render(&self) {
+        fn draw_text(
+            text: &str,
+            y_offset: i16,
+            palette_offset: u16,
+            attr_allocator: &mut ObjAttrAllocator,
+        ) {
+            let len = text.len() as i16;
+            let x_left = (SCREEN_WIDTH - ((len * TILE_WIDTH) + (TILE_PADDING * (len - 1)))) / 2;
+            for (i, letter) in text.chars().enumerate() {
+                let x = x_left + (i as i16) * (TILE_WIDTH + TILE_PADDING);
+                let y = y_offset;
+
+                let obj = ObjAttr::new()
+                    .size(TileSize::SIZE_16X16)
+                    .tile(AsciiChar::from_u8(letter as u8).unwrap().tile_index())
+                    .palette((palette_offset + i as u16) % 3 + 1)
+                    .x(x)
+                    .y(y);
+
+                attr_allocator.allocate_and_write(obj);
+            }
+        }
+
+        let tick = self.0 / 32;
+        let mut attr_allocator = ObjAttrAllocator::new();
+
+        draw_text("WORD", 40, tick, &mut attr_allocator);
+        draw_text(
+            "BOY",
+            40 + TILE_WIDTH + TILE_PADDING,
+            tick + 4,
+            &mut attr_allocator,
+        );
+    }
+}
 
 pub struct Game {
     instance: Instance,

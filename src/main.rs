@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use game::Game;
+use game::{Game, SplashScreen};
 use wordboy::{
     input::KeyInput,
     mmio::{DISPCNT, KEYINPUT, OBJ_ATTRS, OBJ_PALETTE, OBJ_TILE4},
@@ -25,10 +25,16 @@ pub extern "C" fn main() -> ! {
         }
 
         // Start screen
-        loop {
-            wait_vblank();
-            if KEYINPUT.read().a() {
-                break;
+        {
+            let mut splash_screen = SplashScreen::new();
+            loop {
+                wait_vblank();
+                splash_screen.update();
+                splash_screen.render();
+
+                if KEYINPUT.read().a() {
+                    break;
+                }
             }
         }
 
