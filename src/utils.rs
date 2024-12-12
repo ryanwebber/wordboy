@@ -21,49 +21,9 @@ impl<T, const N: usize> ArrayVec<T, N> {
         N
     }
 
-    pub fn first(&self) -> Option<&T> {
-        if self.len > 0 {
-            unsafe { Some(self.data[0].assume_init_ref()) }
-        } else {
-            None
-        }
-    }
-
     pub fn nth(&self, n: usize) -> Option<&T> {
         if n < self.len {
             Some(unsafe { self.data[n].assume_init_ref() })
-        } else {
-            None
-        }
-    }
-
-    pub fn nth_mut(&mut self, n: usize) -> Option<&mut T> {
-        if n < self.len {
-            Some(unsafe { self.data[n].assume_init_mut() })
-        } else {
-            None
-        }
-    }
-
-    pub fn get<'a>(&'a self, index: usize) -> &'a T {
-        if index < self.len {
-            unsafe { self.data[index].assume_init_ref() }
-        } else {
-            panic!("index out of bounds")
-        }
-    }
-
-    pub fn get_mut<'a>(&'a mut self, index: usize) -> &'a mut T {
-        if index < self.len {
-            unsafe { self.data[index].assume_init_mut() }
-        } else {
-            panic!("index out of bounds")
-        }
-    }
-
-    pub fn last(&self) -> Option<&T> {
-        if self.len > 0 {
-            unsafe { Some(self.data[self.len - 1].assume_init_ref()) }
         } else {
             None
         }
@@ -96,27 +56,11 @@ impl<T, const N: usize> ArrayVec<T, N> {
         }
     }
 
-    pub fn is_full(&self) -> bool {
-        self.len == N
-    }
-
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a T> + 'a {
         self.data
             .iter()
             .take(self.len)
             .map(|x| unsafe { x.assume_init_ref() })
-    }
-}
-
-impl<T, const N: usize> ArrayVec<T, N>
-where
-    T: Copy,
-{
-    fn filled_with(value: T) -> Self {
-        Self {
-            data: core::array::from_fn(|_| MaybeUninit::new(value)),
-            len: N,
-        }
     }
 }
 
@@ -135,10 +79,6 @@ impl AsciiChar {
         } else {
             Self::NULL
         }
-    }
-
-    pub fn to_u8(self) -> u8 {
-        self.0
     }
 
     pub fn letter_index(self) -> u16 {
@@ -160,10 +100,6 @@ pub struct WordBuffer(pub [AsciiChar; 5]);
 impl WordBuffer {
     pub const EMPTY: Self = Self([AsciiChar::NULL; 5]);
 
-    pub fn new(value: [AsciiChar; 5]) -> Self {
-        Self(value)
-    }
-
     pub const fn from_u8s(value: [u8; 5]) -> Self {
         let mut buffer = [AsciiChar::NULL; 5];
         buffer[0] = AsciiChar::from_u8(value[0]);
@@ -171,20 +107,6 @@ impl WordBuffer {
         buffer[2] = AsciiChar::from_u8(value[2]);
         buffer[3] = AsciiChar::from_u8(value[3]);
         buffer[4] = AsciiChar::from_u8(value[4]);
-        Self(buffer)
-    }
-
-    pub fn from_str(value: &str) -> Self {
-        let mut buffer = [AsciiChar::NULL; 5];
-
-        for (i, c) in value.chars().enumerate() {
-            if i >= buffer.len() {
-                break;
-            }
-
-            buffer[i] = AsciiChar::from_u8(c as u8);
-        }
-
         Self(buffer)
     }
 
