@@ -183,7 +183,13 @@ impl Instance {
 
     pub fn state(&self) -> State {
         let last_submitted_guess = if self.guesses.len() > 1 {
-            self.guesses.nth(self.guesses.len() - 2)
+            let last_guess_index = if self.finished_guessing {
+                self.guesses.len() - 2
+            } else {
+                self.guesses.len() - 1
+            };
+
+            self.guesses.nth(last_guess_index)
         } else {
             None
         };
@@ -335,9 +341,12 @@ impl Instance {
             }
         }
 
+        // Draw the main grid
         for (row, word) in self.guesses.iter().enumerate() {
             for (col, char) in word.as_slice().iter().enumerate() {
-                let palette_index = if *char == AsciiChar::NULL || row == self.guesses.len() - 1 {
+                let palette_index = if *char == AsciiChar::NULL
+                    || (row == self.guesses.len() - 1 && !self.finished_guessing)
+                {
                     BLACK_PALETTE
                 } else if self.word.as_slice()[col] == *char {
                     GREEN_PALETTE
@@ -399,7 +408,7 @@ impl Instance {
             .x(cursor_x)
             .y(cursor_y);
 
-        // attr_allocator.allocate_and_write(obj);
+        attr_allocator.allocate_and_write(obj);
     }
 }
 

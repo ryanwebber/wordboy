@@ -52,6 +52,11 @@ pub extern "C" fn main() -> ! {
 
         // Main game loop
         'new_game: loop {
+            // Nuke the display
+            for attr in OBJ_ATTRS.iter() {
+                attr.write(ObjAttr::new());
+            }
+
             let mut game = Game::new(rng.next());
             let mut prev_input = KeyInput(0);
 
