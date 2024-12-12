@@ -2,6 +2,8 @@
 
 A Wordle clone for the GameBoy Advance.
 
+![Screenshot](.github/screenshot.png)
+
 ## Building
 
 To build a ROM, you'll need the `arm-none-eabi` rust toolchain, which can be found
