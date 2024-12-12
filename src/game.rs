@@ -23,6 +23,8 @@ const GREEN_PALETTE: u16 = 1;
 const YELLOW_PALETTE: u16 = 2;
 const GREY_PALETTE: u16 = 3;
 const BLACK_PALETTE: u16 = 4;
+const POPUP_WIN_PALETTE: u16 = 5;
+const POPUP_LOSE_PALETTE: u16 = 6;
 
 const NULL_TILE: u16 = 47;
 
@@ -105,17 +107,7 @@ impl Game {
     }
 
     pub fn state(&self) -> State {
-        let word_guessed = self.instance.last_submitted_guess().map_or(false, |guess| {
-            guess.as_slice() == self.instance.word.as_slice()
-        });
-
-        if word_guessed {
-            State::Completed
-        } else if self.instance.finished_guessing {
-            State::Failed
-        } else {
-            State::InProgress
-        }
+        self.instance.state()
     }
 
     pub fn update(&mut self, input: KeyInput) {
@@ -157,6 +149,7 @@ impl Game {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum State {
     Completed,
     Failed,
@@ -188,11 +181,22 @@ impl Instance {
         }
     }
 
-    fn last_submitted_guess(&self) -> Option<&WordBuffer> {
-        if self.guesses.len() > 1 {
+    pub fn state(&self) -> State {
+        let last_submitted_guess = if self.guesses.len() > 1 {
             self.guesses.nth(self.guesses.len() - 2)
         } else {
             None
+        };
+
+        let word_guessed =
+            last_submitted_guess.map_or(false, |guess| guess.as_slice() == self.word.as_slice());
+
+        if word_guessed {
+            State::Completed
+        } else if self.finished_guessing {
+            State::Failed
+        } else {
+            State::InProgress
         }
     }
 
@@ -285,6 +289,52 @@ impl Instance {
 
         let mut attr_allocator = ObjAttrAllocator::new();
 
+        // If the game is over, draw the finish screen
+        let state = self.state();
+        if state != State::InProgress {
+            const POPUP_ROWS: [[u16; 7]; 3] = [
+                [32, 33, 33, 33, 33, 33, 34],
+                [40, 00, 00, 00, 00, 00, 42],
+                [48, 49, 49, 49, 49, 49, 50],
+            ];
+
+            const POPUP_WIDTH: i16 = 7 * TILE_WIDTH;
+            const POPUP_X_OFFSET: i16 = (SCREEN_WIDTH - POPUP_WIDTH) / 2;
+            const POPUP_Y_OFFSET: i16 = (SCREEN_HEIGHT - 3 * TILE_WIDTH) / 2;
+
+            let palette = if state == State::Completed {
+                POPUP_WIN_PALETTE
+            } else {
+                POPUP_LOSE_PALETTE
+            };
+
+            for (r, row) in POPUP_ROWS.iter().enumerate() {
+                for (c, tile) in row.iter().enumerate() {
+                    let x = POPUP_X_OFFSET + (c as i16) * TILE_WIDTH;
+                    let y = POPUP_Y_OFFSET + (r as i16) * TILE_WIDTH;
+
+                    let obj = if *tile == 0 {
+                        let letter = self.word.as_slice()[c - 1].tile_index();
+                        ObjAttr::new()
+                            .size(TileSize::SIZE_16X16)
+                            .tile(letter)
+                            .palette(palette)
+                            .x(x)
+                            .y(y)
+                    } else {
+                        ObjAttr::new()
+                            .size(TileSize::SIZE_16X16)
+                            .tile(*tile * 4 + 1)
+                            .palette(palette)
+                            .x(x)
+                            .y(y)
+                    };
+
+                    attr_allocator.allocate_and_write(obj);
+                }
+            }
+        }
+
         for (row, word) in self.guesses.iter().enumerate() {
             for (col, char) in word.as_slice().iter().enumerate() {
                 let palette_index = if *char == AsciiChar::NULL || row == self.guesses.len() - 1 {
@@ -349,7 +399,7 @@ impl Instance {
             .x(cursor_x)
             .y(cursor_y);
 
-        attr_allocator.allocate_and_write(obj);
+        // attr_allocator.allocate_and_write(obj);
     }
 }
 

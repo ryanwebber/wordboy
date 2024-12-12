@@ -12,7 +12,14 @@ pub fn random_word(index: usize) -> WordBuffer {
     DICTIONARY[index % DICTIONARY.len()]
 }
 
+/*
+   Unlike normal Wordle, we're using the same dictionary for
+   words and guesses just because we only have so much
+   space in the ROM. This list must be sorted, because
+   we binary search it in `is_valid_guess`.
+*/
 const DICTIONARY: &[WordBuffer] = &[
+    WordBuffer::from_u8s([b'a', b'a', b'a', b'a', b'a']),
     WordBuffer::from_u8s([b'a', b'b', b'a', b'c', b'k']),
     WordBuffer::from_u8s([b'a', b'b', b'a', b's', b'e']),
     WordBuffer::from_u8s([b'a', b'b', b'a', b't', b'e']),

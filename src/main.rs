@@ -132,6 +132,18 @@ fn initialize_palette() {
     OBJ_PALETTE.index(16 * 4 + 3).write(Color::rgb(6, 6, 6));
     OBJ_PALETTE.index(16 * 4 + 4).write(Color::rgb(18, 18, 18));
     OBJ_PALETTE.index(16 * 4 + 5).write(Color::rgb(20, 6, 6));
+
+    // Palette Bank 4 : Popup - win
+    OBJ_PALETTE.index(16 * 5 + 1).write(Color::WHITE);
+    OBJ_PALETTE.index(16 * 5 + 2).write(Color::rgb(9, 20, 16));
+    OBJ_PALETTE.index(16 * 5 + 3).write(Color::rgb(9, 20, 16));
+    OBJ_PALETTE.index(16 * 5 + 4).write(Color::rgb(7, 15, 10));
+
+    // Palette Bank 4 : Popup - lose
+    OBJ_PALETTE.index(16 * 6 + 1).write(Color::WHITE);
+    OBJ_PALETTE.index(16 * 6 + 2).write(Color::rgb(13, 15, 15));
+    OBJ_PALETTE.index(16 * 6 + 3).write(Color::rgb(13, 15, 15));
+    OBJ_PALETTE.index(16 * 6 + 4).write(Color::rgb(8, 10, 10));
 }
 
 fn intiialize_sprites() {
