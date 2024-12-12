@@ -185,9 +185,9 @@ impl Instance {
     pub fn state(&self) -> State {
         let last_submitted_guess = if self.guesses.len() > 1 {
             let last_guess_index = if self.finished_guessing {
-                self.guesses.len() - 2
-            } else {
                 self.guesses.len() - 1
+            } else {
+                self.guesses.len() - 2
             };
 
             self.guesses.nth(last_guess_index)
@@ -233,14 +233,6 @@ impl Instance {
             Input::Delete => {
                 let current_guess = self.guesses.last_mut().unwrap();
                 current_guess.pop();
-            }
-            Input::Key(letter) => {
-                let current_guess = self.guesses.last_mut().unwrap();
-                if current_guess.is_full() {
-                    return;
-                }
-
-                current_guess.push(letter);
             }
             Input::Submit => {
                 let current_guess = self.guesses.last_mut().unwrap();
@@ -400,7 +392,7 @@ impl Instance {
         }
 
         // Draw the cursor
-        let cursor_x = base_x_offset;
+        let cursor_x = SCREEN_WIDTH / 2 - TILE_WIDTH / 2;
         let cursor_y = SCREEN_HEIGHT - TILE_PADDING - 6;
         let obj = ObjAttr::new()
             .size(TileSize::SIZE_16X16)
@@ -443,7 +435,6 @@ enum Input {
     Char,
     CursorLeft,
     CursorRight,
-    Key(AsciiChar),
     Delete,
     Submit,
 }

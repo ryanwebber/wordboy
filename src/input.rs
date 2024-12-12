@@ -4,6 +4,11 @@ pub struct KeyInput(pub u16);
 
 impl KeyInput {
     #[inline]
+    pub const fn is_some(self) -> bool {
+        self.0 != 0
+    }
+
+    #[inline]
     pub const fn a(self) -> bool {
         (self.0 & (1 << 0)) == 0
     }

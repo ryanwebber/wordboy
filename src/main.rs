@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-use core::borrow::BorrowMut;
-
 use game::{Game, SplashScreen};
 use wordboy::{
     input::KeyInput,
@@ -60,15 +58,20 @@ pub extern "C" fn main() -> ! {
             }
 
             let mut game = Game::new(rng.next());
+            let mut game_ticks = 0u16;
             let mut prev_input = KeyInput(0);
 
             'game_tick: loop {
                 wait_vblank();
 
-                // Poke the RNG to increase our amount of perceived randomness
-                _ = rng.next();
-
+                game_ticks = game_ticks.wrapping_add(1);
                 let current_input = KEYINPUT.read();
+
+                if current_input.is_some() {
+                    // Poke the RNG to increase our amount of perceived randomness
+                    rng.donate(current_input.0.wrapping_mul(game_ticks));
+                }
+
                 if current_input.start_once(prev_input) {
                     continue 'restart;
                 }

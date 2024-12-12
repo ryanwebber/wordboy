@@ -16,6 +16,11 @@ impl PRNG {
         PRNG(seed)
     }
 
+    pub fn donate(&mut self, seed: u16) {
+        // Add some user-provided entropy
+        self.0 ^= PRNG::new(seed).next();
+    }
+
     // Generate the next pseudo-random number
     pub fn next(&mut self) -> u16 {
         // Calculate the next number in the sequence
