@@ -75,6 +75,7 @@ impl SplashScreen {
             &mut attr_allocator,
         );
 
+        // Start button
         let start_off_x = SCREEN_WIDTH / 2 - TILE_WIDTH;
         let start_off_y = SCREEN_HEIGHT - TILE_WIDTH - 24;
         for i in 0..2 {

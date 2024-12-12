@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+use core::borrow::BorrowMut;
+
 use game::{Game, SplashScreen};
 use wordboy::{
     input::KeyInput,
@@ -42,7 +44,7 @@ pub extern "C" fn main() -> ! {
                 splash_screen.render();
 
                 let input = KEYINPUT.read();
-                if input.start_once(prev_input) {
+                if input.start_once(prev_input) || input.a_once(prev_input) {
                     break;
                 }
 
@@ -91,13 +93,16 @@ pub extern "C" fn main() -> ! {
                 // Wait for the user to restart the game or head back to the start screen
                 loop {
                     wait_vblank();
-                    if KEYINPUT.read().a() {
+                    let current_input = KEYINPUT.read();
+                    if current_input.a_once(prev_input) {
                         continue 'new_game;
                     }
 
-                    if KEYINPUT.read().start() || KEYINPUT.read().select() || KEYINPUT.read().b() {
+                    if current_input.start_once(prev_input) || current_input.b_once(prev_input) {
                         continue 'restart;
                     }
+
+                    prev_input = current_input;
                 }
             }
         }
