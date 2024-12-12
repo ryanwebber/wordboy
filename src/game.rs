@@ -160,7 +160,7 @@ pub enum State {
 struct Instance {
     word: WordBuffer,
     guesses: ArrayVec<WordBuffer, TILE_ROW_COUNT>,
-    letter_states: [GuessInstance; 27],
+    letter_states: [LetterMatch; 27],
     finished_guessing: bool,
     keyboard_anim_offset: i16,
     cursor: u8,
@@ -175,7 +175,7 @@ impl Instance {
                 guesses.push(WordBuffer::EMPTY);
                 guesses
             },
-            letter_states: [GuessInstance::Grey; 27],
+            letter_states: [LetterMatch::Grey; 27],
             keyboard_anim_offset: 0,
             finished_guessing: false,
             cursor: 0,
@@ -250,12 +250,12 @@ impl Instance {
                 for (i, c) in current_guess.as_slice().iter().enumerate() {
                     if self.word.as_slice()[i] == *c {
                         self.letter_states[c.letter_index() as usize]
-                            .maybe_upgrade(GuessInstance::Green);
+                            .maybe_upgrade(LetterMatch::Green);
                     } else if self.word.as_slice().contains(c) {
                         self.letter_states[c.letter_index() as usize]
-                            .maybe_upgrade(GuessInstance::Yellow);
+                            .maybe_upgrade(LetterMatch::Yellow);
                     } else {
-                        self.letter_states[c.letter_index() as usize] = GuessInstance::Black;
+                        self.letter_states[c.letter_index() as usize] = LetterMatch::Black;
                     }
                 }
 
@@ -407,14 +407,14 @@ impl Instance {
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum GuessInstance {
+enum LetterMatch {
     Grey = 0,
     Yellow = 1,
     Green = 2,
     Black = 3,
 }
 
-impl GuessInstance {
+impl LetterMatch {
     fn maybe_upgrade(&mut self, new_state: Self) {
         if (*self as u8) < (new_state as u8) {
             *self = new_state;
