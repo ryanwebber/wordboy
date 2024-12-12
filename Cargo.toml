@@ -1,3 +1,5 @@
+cargo-features = ["different-binary-name"]
+
 [package]
 name = "wordboy"
 version = "0.1.0"
@@ -5,6 +7,11 @@ edition = "2021"
 
 [profile.dev]
 opt-level = 3
+
+[[bin]]
+name = "wordboy"
+path = "src/main.rs"
+filename = "wordboy.gba"
 
 [dependencies]
 bitflags = "2.6.0"
