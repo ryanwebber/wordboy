@@ -1,6 +1,6 @@
 # WordBoy
 
-A Wordle clone for the GameBoy Advance.
+A Wordle clone for the GameBoy Advance written in no-std rust.
 
 ![Screenshot](.github/screenshot.png)
 
